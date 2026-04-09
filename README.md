@@ -11,7 +11,7 @@ It also needs to:
 - Use a Raspberry Pi Pico 2W
 
 
-#Code 1. Measures temperature, compares it to a pre-set threshold, and illuminates an LED accordingly.
-#Code 2. Adds in a light level sensor and LED.
-#Code 3. Adds in a humidity sensor and LED.
-#code 4. Adds in wifi and MQTT
+Code 1. Measures temperature, compares it to a pre-set threshold, and illuminates an LED accordingly.
+Code 2. Adds in a light level sensor and LED.
+Code 3. Adds in a humidity sensor and LED.
+code 4. Adds in wifi and MQTT
