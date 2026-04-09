@@ -1,3 +1,5 @@
+#Code 1. This measures temperature, compares it to a pre-set threshold, and illuminates an LED accordingly.
+
 import sys, math
 #sys allows us to check we're on a Pico. math is needed for temperature calculations
 from time import sleep
