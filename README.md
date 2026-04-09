@@ -10,7 +10,7 @@ It also needs to:
 - Be written primarily in micro-python
 - Use a Raspberry Pi Pico 2W
 
-
+I have worked through the following sequence:
 - Code 1. Measures temperature, compares it to a pre-set threshold, and illuminates an LED accordingly.
 - Code 2. Adds in a light level sensor and LED.
 - Code 3. Adds in a humidity sensor and LED.
