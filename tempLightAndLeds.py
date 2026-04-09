@@ -1,3 +1,5 @@
+#Code 2. This adds in a light level sensor and LED.
+
 import sys, math
 #sys allows us to check we're on a Pico. math is needed for temperature calculations
 from time import sleep
