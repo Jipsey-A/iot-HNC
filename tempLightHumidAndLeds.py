@@ -1,3 +1,5 @@
+#Code 3. This adds in a humidity sensor and LED.
+
 import sys, math
 #sys allows us to check we're on a Pico. math is needed for temperature calculations
 from time import sleep
