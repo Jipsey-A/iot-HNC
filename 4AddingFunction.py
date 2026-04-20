@@ -1,12 +1,19 @@
+#This file adds:
+    #- A Heater boost button
+    # - a tweak so that the humidity and temperature logic is held on the Pico, and Flowfuse manages light level logic
+    # -the INA228 Power Monitor reading voltage, current, power and energy plus a reset button on FlowFuse for energy accumulated over a period. 
+
+
 import sys, math
 #sys allows us to check we're on a Pico. math is needed for temperature calculations
 import time
 from time import sleep
 #sleep allows us to slow things down with a pause after each round
-from machine import ADC, Pin, PWM
-#ADC and Pin tell the code where to look for hardware
+from machine import ADC, Pin, PWM, I2C
+#ADC and Pin tell the code where to look for hardware. I2C is another how the INA228 talks to the Pico
 import network #needed for wifi set-up
 from mqtt import MQTTClient #needed for mqtt
+import ina228 #library for the opwer monitor
 
 #set-up MQTT info
 SSID = 'PLUSNET-3PC2PM' #home settings*
@@ -26,6 +33,12 @@ lightActionTopic = thingName+'/lightAction'
 humidActionTopic = thingName+'/humidAction'
 boostButtonTopic = thingName+'/boostButton'
 boostStatusTopic = thingName+'/boostStatus'
+solarVoltageTopic = thingName+'/solarVoltage'
+solarCurrentTopic = thingName+'/solarCurrent'
+solarPowerTopic = thingName+'/solarPower'
+solarEnergyTopic = thingName+'/solarEnergy'
+solarResetTopic = thingName+'/solarReset'
+
 
 #setup hardware
 #sensors & associated info
@@ -42,7 +55,11 @@ lastSensorTime = 0 #this tells us how long it's been since the last sensor readi
 sensorInterval = 1000   # This controls the rate of readings. 1000 ms = 1 second
 light_action = 0 #set's up a boolean to control whether the yellow led is on or off
 boostTime = 5
-
+#set up the INA228 power monitor
+ina = ina228.INA228(
+    I2C(0,sda=Pin(4), scl=Pin(5), freq=400000),
+    shunt_resistance=0.015,
+    max_current=10,)
 #actuators
 redLed = Pin(15, Pin.OUT) #red LED into pin 15 responds to temp
 yellowLed = Pin(14, Pin.OUT) #yellow LED into pin 14 responds to light level
@@ -88,6 +105,7 @@ def wifi():
     client.subscribe(humidThresholdTopic)
     client.subscribe(boostButtonTopic)
     client.subscribe(lightActionTopic)
+    client.subscribe(solarResetTopic)
     
     return client
 
@@ -134,8 +152,13 @@ def masterCallback(topic, msg):
             light_action = int(msg)
             #print("Dashboard set light action to:", light_action)  #commented out as too many messages from dashboard
         except:
-            print("Invalid boost button request received")        
-
+            print("Invalid light action request received")        
+    elif "solarReset" in topic:
+        try:
+            ina.reset_accumulation() #resets the energy counter and starts a new session on flowfuse dashboard
+            print("dashboard reset button pressed")
+        except:
+            print("Invalid solar reset button request received")        
 
 #check if the physical button on the IoT device has been pressed
 #if so, make boostActive =1 and start boostStart bfunction
@@ -189,7 +212,7 @@ def readTemp(adc_value):
     TempKelvin = 1 / (A + (B * math.log(Rt)) + (C * math.pow(math.log(Rt), 3)))
 
     # Convert from Kelvin to Celsius
-    TempCelsius = TempKelvin - 273.15
+    TempCelsius = TempKelvin - 272.15 +4
     return TempCelsius
 
 # Start of main loop
@@ -243,7 +266,26 @@ while True:
         print(f"Relative humidity is {humidityPct}%")
         client.publish(humidTopic, str(int(humidityPct)))
         client.check_msg()
+        
+        #INA228 POWER MONITOR - solarVoltageTopic, solarCurrentTopic, solarPowerTopic
+        voltage = ina.voltage
+        print(f"Bus Voltage: {voltage:.3f} V")
+        client.publish(solarVoltageTopic, f"{voltage:.3f}")
+
+        current = ((ina.current)*1000)
+        print(f"Current: {current:.3f} mA")
+        client.publish(solarCurrentTopic, f"{current:.3f}")
+
+        power = ina.power 
+        print(f"Power: {power:.3f} W")
+        client.publish(solarPowerTopic, f"{power:.3f}")
+
+        energy = ina.energy 
+        print(f"Energy: {energy:.3f} J")
+        client.publish(solarEnergyTopic, f"{energy:.3f}")
     
+        client.check_msg()
+
         #now instruct the activators to respond depending on comparison of reading with threshold
         #and to publish a message communicating the status of the action.
         
